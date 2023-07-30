@@ -18,6 +18,7 @@ def parse_events(events: 'list[dict]') -> replay_typing.MovementDurationAndFrequ
       keypress = type == 'keydown'
       key = event.get('data').get('key')
       frame = event.get('frame') + event.get('data').get('subframe')
+      if key not in last_pressed: continue
       if keypress:
         if last_pressed[key] >= 0: key_frequency[key].append(1 / ((frame - last_pressed[key]) / (1000/60) ))
         last_pressed[key] = frame
