@@ -36,7 +36,7 @@ def parse_multiplayer_round(data: dict):
   players = list(board.get('user').get('username') for board in data.get('board'))
   results = [{} for i in range(len(players))]
   for i, replay in enumerate(data.get('replays')):
-    results[i]['player'] = replay['events'][0]['data']['options']['username']
+    results[i]['player'] = replay['events'][0]['data']['options']['username'] if 'options' in replay['events'][0]['data'] else players[1-i] # why is it flipped :skull:
     results[i]['stats'] = parse_events(replay)
   return results
 
