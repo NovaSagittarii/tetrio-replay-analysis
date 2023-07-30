@@ -20,7 +20,10 @@ def parse_events(events: 'list[dict]') -> replay_typing.MovementDurationAndFrequ
       frame = event.get('frame') + event.get('data').get('subframe')
       if key not in last_pressed: continue
       if keypress:
-        if last_pressed[key] >= 0: key_frequency[key].append(1 / ((frame - last_pressed[key]) / (1000/60) ))
+        if last_pressed[key] >= 0:
+          frame_since_press = frame - last_pressed[key]
+          pps = min((60 / frame_since_press) if frame_since_press else 10, 10)
+          key_frequency[key].append(pps)
         last_pressed[key] = frame
       else:
         key_duration[key].append(frame - last_pressed[key])
@@ -33,7 +36,7 @@ def parse_multiplayer_round(data: dict):
   players = list(board.get('user').get('username') for board in data.get('board'))
   results = [{} for i in range(len(players))]
   for i, replay in enumerate(data.get('replays')):
-    results[i]['player'] = players[i]
+    results[i]['player'] = replay['events'][0]['data']['options']['username']
     results[i]['stats'] = parse_events(replay)
   return results
 
@@ -41,15 +44,17 @@ def display_round(playerStats: 'list[dict]'):
   with st.container():
     player_names:list[str] = []
     player_place_times:list[float] = []
+    # st.write(playerStats)
     for i in range(len(playerStats)):
       player:str = playerStats[i]['player']
       stats:replay_typing.MovementDurationAndFrequency = playerStats[i]['stats']
       place_times:list[float] = stats['frequency']['hardDrop']
-      place_times.append(0)
       player_names.append(player)
-      player_place_times.append(place_times)
-    st.write('### PPS Comparison ' + ' vs '.join(player_names))
-    fig = ff.create_distplot(player_place_times, player_names, bin_size=0.1)
+      player_place_times.append([0, 10] + place_times)
+    col1, col2 = st.columns(2)
+    col1.write('PPS Comparison ' + ' vs '.join(player_names))
+    col2.write('avg ' + ' vs '.join(f'{sum(w)/len(w):.3f}' for w in player_place_times))
+    fig = ff.create_distplot(player_place_times, player_names, bin_size=0.25)
     st.plotly_chart(fig, use_container_width=True)
 
 def parse_replay_file(obj: dict):
@@ -59,13 +64,21 @@ def parse_replay_file(obj: dict):
     rounds = []
     for round in obj.get('data', []):
       rounds.append(parse_multiplayer_round(round))
-    for round in rounds[1:]:
-      for i in range(len(round)):
-        playerStats : replay_typing.MovementDurationAndFrequency = round[i]['stats']
-        for type in playerStats:
-          for key in playerStats[type]:
-            rounds[0][i]['stats'][type][key] += playerStats[type][key]
-    display_round(rounds[0])
+    with st.container():
+      tabs = st.tabs([f'Round {i+1}' for i in range(len(rounds))] + ['Set average'])
+      for i, round in enumerate(rounds):
+        with tabs[i]:
+          # st.header(f'Round {i+1}')
+          display_round(round)
+      for round in rounds[1:]:
+        for i in range(len(round)):
+          playerStats : replay_typing.MovementDurationAndFrequency = round[i]['stats']
+          for type in playerStats:
+            for key in playerStats[type]:
+              rounds[0][i]['stats'][type][key] += playerStats[type][key]
+      with tabs[-1]:
+        # st.header('Set average')
+        display_round(rounds[0])
   else: # 1P game
     pass
 
