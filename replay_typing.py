@@ -9,3 +9,7 @@ class MovementFrames(TypedDict):
   hardDrop: 'list[float]'
   softDrop: 'list[float]'
   hold: 'list[float]'
+
+class MovementDurationAndFrequency(TypedDict):
+  duration: MovementFrames
+  frequency: MovementFrames
