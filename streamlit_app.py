@@ -19,7 +19,7 @@ def parse_events(events: 'list[dict]') -> replay_typing.MovementDurationAndFrequ
       key = event.get('data').get('key')
       frame = event.get('frame') + event.get('data').get('subframe')
       if keypress:
-        if last_pressed[key] >= 0: key_frequency[key].append(frame - last_pressed[key])
+        if last_pressed[key] >= 0: key_frequency[key].append(1 / ((frame - last_pressed[key]) / (1000/60) ))
         last_pressed[key] = frame
       else:
         key_duration[key].append(frame - last_pressed[key])
@@ -44,10 +44,11 @@ def display_round(playerStats: 'list[dict]'):
       player:str = playerStats[i]['player']
       stats:replay_typing.MovementDurationAndFrequency = playerStats[i]['stats']
       place_times:list[float] = stats['frequency']['hardDrop']
+      place_times.append(0)
       player_names.append(player)
       player_place_times.append(place_times)
-    st.write('# ' + ' vs '.join(player_names))
-    fig = ff.create_distplot(player_place_times, player_names, bin_size=1000/60)
+    st.write('### PPS Comparison ' + ' vs '.join(player_names))
+    fig = ff.create_distplot(player_place_times, player_names, bin_size=0.1)
     st.plotly_chart(fig, use_container_width=True)
 
 def parse_replay_file(obj: dict):
